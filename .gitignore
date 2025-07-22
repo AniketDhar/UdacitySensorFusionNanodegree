@@ -1,6 +1,6 @@
-build/
+**/build/
 .vscode/
 .github/workflows/
 *.log
 *.exe
-CMakeFiles/
+**/CMakeFiles/
