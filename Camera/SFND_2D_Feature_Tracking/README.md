@@ -3,6 +3,33 @@
 <img src="images/keypoints.png" width="820" height="248" />
 
 The idea of the camera course is to build a collision detection system - that's the overall goal for the Final Project. As a preparation for this, you will now build the feature tracking part and test various detector / descriptor combinations to see which ones perform best. This mid-term project consists of four parts:
+* setting up data structures and putting everything into a ring buffer to optimize memory load
+* integrate several keypoint detectors such as HARRIS, FAST, BRISK and SIFT and compare them with regard to number of keypoints and speed
+* descriptor extraction and matching using brute force and also the FLANN approach
+* test the various algorithms in different combinations and compare them with regard to some performance measures
+
+## Dependencies for Running Locally
+
+#### Compiler
+- C++ Standard: C++17
+- Compiler: GCC >= 9 (or Clang >= 10)
+- CMake >= 3.10
+
+#### Libraries
+- OpenCV >= 4.1 (built **locally with opencv_contrib** modules)
+
+#### Notes
+- OpenCV must be built from source with `opencv_contrib` modules enabled.
+- Make sure `OpenCV_DIR` is properly set in the environment or passed to CMake during configuration.
+
+#### Build Instructions
+- Clone repository locally
+```bash
+# Set up and build
+mkdir build && cd build
+cmake ..
+make
+```
 
 ## 2D Feature Tracking Performance Report
 
