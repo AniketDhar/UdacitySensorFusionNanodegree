@@ -1,6 +1,7 @@
 # SFND 2D Feature Tracking
 
 <img src="images/keypoints.png" width="820" height="248" />
+<img src="images/FAST_BRISK_matching.jpg" width="1244" height="206" />
 
 The idea of the camera course is to build a collision detection system - that's the overall goal for the Final Project. As a preparation for this, you will now build the feature tracking part and test various detector / descriptor combinations to see which ones perform best. This mid-term project consists of four parts:
 * setting up data structures and putting everything into a ring buffer to optimize memory load
