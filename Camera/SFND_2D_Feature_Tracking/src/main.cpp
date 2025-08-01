@@ -24,10 +24,16 @@ int main(int argc, const char *argv[])
 {
     // Prompt user to select detector and descriptor
     std::string detectorType, descriptorType;
+    char loggingSelection;
     std::cout << "Enter detector type (SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT): ";
     std::cin >> detectorType;
     std::cout << "Enter descriptor type (BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT): ";
     std::cin >> descriptorType;
+    std::cout << "Do you want to log results? (Y/N): ";
+    std::cin >> loggingSelection;
+
+    bool enableLogging = (loggingSelection == 'Y' || loggingSelection == 'y');
+    std::cout << "Logging set to : " << enableLogging << std::endl;
 
     // Validate combination
     if ((detectorType != "AKAZE" && descriptorType == "AKAZE") ||
@@ -36,9 +42,6 @@ int main(int argc, const char *argv[])
         std::cerr << "Invalid detector/descriptor combination." << std::endl;
         return 1;
     }
-
-    // Initialize logger
-    Logger logger("../logs/performance_summary.csv");
 
     // Data location
     std::string dataPath = "../";
@@ -122,10 +125,10 @@ int main(int argc, const char *argv[])
         }
 
         // optional : limit number of keypoints (helpful for debugging and learning)
-        bool bLimitKpts = false;
+        bool bLimitKpts = true;
         if (bLimitKpts)
         {
-            int maxKeypoints = 50;
+            int maxKeypoints = 100;
 
             if (detectorType.compare("SHITOMASI") == 0)
             { // there is no response info, so keep the first 50 as they are sorted in descending quality order
@@ -193,17 +196,23 @@ int main(int argc, const char *argv[])
         }
     }
 
-    // Log average values after all images
-    auto numImages = static_cast<double>(imgIndex);
-    double avgKeypoints = totalKeypoints / numImages;
-    double avgVehicleKeypoints = totalVehicleKeypoints / numImages;
-    double avgNeighborhoodSize = totalVehicleKeypoints > 0 ? totalNeighborhoodSize / totalVehicleKeypoints : 0.0;
-    double avgDetTime = totalDetTime / numImages;
-    double avgDescTime = totalDescTime / numImages;
-    double avgMatches = totalMatches / numImages;
+    if(enableLogging)
+    {
+        // Initialize logger
+        Logger logger("../logs/performance_summary.csv");
 
-    logger.log(detectorType, descriptorType, avgKeypoints, avgVehicleKeypoints, avgNeighborhoodSize,
-               avgMatches, avgDetTime, avgDescTime);
+        // Log average values after all images
+        auto numImages = static_cast<double>(imgIndex);
+        double avgKeypoints = totalKeypoints / numImages;
+        double avgVehicleKeypoints = totalVehicleKeypoints / numImages;
+        double avgNeighborhoodSize = totalVehicleKeypoints > 0 ? totalNeighborhoodSize / totalVehicleKeypoints : 0.0;
+        double avgDetTime = totalDetTime / numImages;
+        double avgDescTime = totalDescTime / numImages;
+        double avgMatches = totalMatches / numImages;
+
+        logger.log(detectorType, descriptorType, avgKeypoints, avgVehicleKeypoints, avgNeighborhoodSize,
+                avgMatches, avgDetTime, avgDescTime);
+    }
 
     return 0;
 }
