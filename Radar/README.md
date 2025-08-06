@@ -42,7 +42,7 @@ The radar signal processing pipeline follows these key steps:
 ---
 
 
-## 📡 1. FMCW Waveform Design
+## 1. FMCW Waveform Design
 
 The waveform is designed based on the following radar parameters:
 
@@ -74,7 +74,7 @@ From these, the following parameters are calculated:
 
 ---
 
-## 🚀 2. Target Simulation & Beat Signal
+## 2. Target Simulation & Beat Signal
 
 The target's motion is simulated using:
 
@@ -90,7 +90,7 @@ At each time step `t(i)`:
 
 ---
 
-## 📈 3. Range FFT (1D FFT)
+## 3. Range FFT (1D FFT)
 
 - Reshape `Mix` into `[Nr, Nd]` format.
 - Apply FFT across range dimension.
@@ -101,7 +101,7 @@ At each time step `t(i)`:
 
 ---
 
-## 🔎 4. Range-Doppler Map (2D FFT)
+## 4. Range-Doppler Map (2D FFT)
 
 - Apply 2D FFT on reshaped beat signal.
 - Shift zero frequency to center.
@@ -111,7 +111,7 @@ At each time step `t(i)`:
 
 ---
 
-## 🧠 5. 2D CFAR Implementation
+## 5. 2D CFAR Implementation
 
 CFAR is applied on the RDM to detect valid targets and suppress noise.
 
