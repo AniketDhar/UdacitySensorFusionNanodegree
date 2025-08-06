@@ -56,19 +56,14 @@ The waveform is designed based on the following radar parameters:
 From these, the following parameters are calculated:
 
 - **Bandwidth (B)**  
-  \[
-  B = \frac{c}{2 \times \text{Range Resolution}} = \frac{3 \times 10^8}{2 \times 1} = 150 \times 10^6 \text{ Hz}
-  \]
+  `B = c / (2 × Range Resolution) = 3e8 / (2 × 1) = 150e6 Hz`
 
 - **Chirp Time (Tchirp)**  
-  \[
-  T_{\text{chirp}} = 5.5 \times \frac{2 \times \text{Max Range}}{c} = 5.5 \times \frac{400}{3 \times 10^8} \approx 7.33 \times 10^{-6} \text{ s}
-  \]
+  `Tchirp = 5.5 × (2 × Max Range) / c = 5.5 × 400 / 3e8 ≈ 7.33e-6 s`
 
 - **Slope**  
-  \[
-  S = \frac{B}{T_{\text{chirp}}} \approx \frac{150 \times 10^6}{7.33 \times 10^{-6}} \approx 2.05 \times 10^{13} \text{ Hz/s}
-  \]
+  `S = B / Tchirp = 150e6 / 7.33e-6 ≈ 2.05e13 Hz/s`
+
 
 ✅ The calculated slope matches the rubric's expectation (~2e13 Hz/s).
 
