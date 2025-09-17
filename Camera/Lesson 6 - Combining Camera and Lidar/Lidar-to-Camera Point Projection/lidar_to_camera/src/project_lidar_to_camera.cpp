@@ -49,20 +49,40 @@ void projectLidarToCamera2()
     cv::Mat Y(3,1,cv::DataType<double>::type);
 
     // TODO
-    for(auto it=lidarPoints.begin(); it!=lidarPoints.end(); ++it) {
+    //for(auto it=lidarPoints.begin(); it!=lidarPoints.end(); ++it) 
+    for(const auto& lp : lidarPoints)
+    {
+        // 0. Filter Lidar points outside the region of consideration
+        constexpr double maxInFront = 20.0;
+        constexpr double maxOnSides = 5.0;
+        constexpr double belowRoadSurface = -1.5;
+        constexpr double minReflectivity = 0.01;
+
+        if(lp.x < 0.0 || lp.x > maxInFront || std::abs(lp.y) > maxOnSides || lp.z < belowRoadSurface || lp.r < minReflectivity)
+        {
+            continue;
+        }
+
         // 1. Convert current Lidar point into homogeneous coordinates and store it in the 4D variable X.
+        X.at<double>(0, 0) = lp.x;
+        X.at<double>(1, 0) = lp.y;
+        X.at<double>(2, 0) = lp.z;
+        X.at<double>(3, 0) = 1.0;
 
         // 2. Then, apply the projection equation as detailed in lesson 5.1 to map X onto the image plane of the camera. 
         // Store the result in Y.
 
-        // 3. Once this is done, transform Y back into Euclidean coordinates and store the result in the variable pt.
-        cv::Point pt;
+        Y = P_rect_00 * R_rect_00 * RT * X;
 
-        float val = it->x;
-        float maxVal = 20.0;
-        int red = min(255, (int)(255 * abs((val - maxVal) / maxVal)));
-        int green = min(255, (int)(255 * (1 - abs((val - maxVal) / maxVal))));
-        cv::circle(overlay, pt, 5, cv::Scalar(0, green, red), -1);
+        // 3. Once this is done, transform Y back into Euclidean coordinates and store the result in the variable pt.       
+        const double w = Y.at<double>(2, 0);
+        cv::Point pt{static_cast<int>(Y.at<double>(0, 0) / w), static_cast<int>(Y.at<double>(1, 0) / w)};
+
+        const float val = lp.x;
+        constexpr float maxVal = 20.0f;
+        const int red = min(255, (int)(255 * abs((val - maxVal) / maxVal)));
+        const int green = min(255, (int)(255 * (1 - abs((val - maxVal) / maxVal))));
+        cv::circle(overlay, pt, 5, cv::Scalar(0, green, red), cv::FILLED);
     }
 
     float opacity = 0.6;

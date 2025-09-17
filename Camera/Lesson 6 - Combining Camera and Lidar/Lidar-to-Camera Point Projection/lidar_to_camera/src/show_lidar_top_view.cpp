@@ -19,23 +19,27 @@ void showLidarTopview()
     // create topview image
     cv::Mat topviewImg(imageSize, CV_8UC3, cv::Scalar(0, 0, 0));
 
-    // plot Lidar points into image
-    for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
+    // Plot Lidar points into image (Top-View)
+    for (const auto &lidarPt : lidarPoints)
     {
-        float xw = (*it).x; // world position in m with x facing forward from sensor
-        float yw = (*it).y; // world position in m with y facing left from sensor
+        float xw = lidarPt.x; // world position in forward distance in meters
+        float yw = lidarPt.y; // world position in left/right offset in meters
+        float zw = lidarPt.z; // world position in height in meters
 
-        int y = (-xw * imageSize.height / worldSize.height) + imageSize.height;
-        int x = (-yw * imageSize.width / worldSize.width) + imageSize.width / 2;
+        // Filter out points on the road surface 
+        constexpr float roadSurfaceLevel = -1.5f; 
+        if (zw < roadSurfaceLevel) continue; // skip points below road surface
 
+        // Map world coordinates to image coordinates 
+        int y = static_cast<int>((-xw * imageSize.height / worldSize.height) + imageSize.height);
+        int x = static_cast<int>((-yw * imageSize.width / worldSize.width) + imageSize.width / 2.0f);
 
-        cv::circle(topviewImg, cv::Point(x, y), 5, cv::Scalar(0, 0, 255), -1);
-        
-        // TODO: 
-        // 1. Change the color of the Lidar points such that 
-        // X=0.0m corresponds to red while X=20.0m is shown as green.
-        // 2. Remove all Lidar points on the road surface while preserving 
-        // measurements on the obstacles in the scene.
+        // Color mapping: X=0.0m -> red, X=20.0m -> green
+        constexpr float maxVal = 20.0f;
+        int red   = std::min(255, static_cast<int>(255 * (1.0f - xw / maxVal)));
+        int green = std::min(255, static_cast<int>(255 * (xw / maxVal)));
+
+        cv::circle(topviewImg, cv::Point(x, y), 5, cv::Scalar(0, green, red), -1);
     }
 
     // plot distance markers

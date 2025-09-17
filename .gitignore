@@ -5,3 +5,5 @@
 *.exe
 **/CMakeFiles/
 *.Zone.Identifier
+**.weights
+**.weights.old

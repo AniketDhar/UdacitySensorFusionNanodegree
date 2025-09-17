@@ -7,8 +7,6 @@
 #include "structIO.hpp"
 #include "dataStructures.h"
 
-using namespace std;
-
 void loadCalibrationData(cv::Mat &P_rect_00, cv::Mat &R_rect_00, cv::Mat &RT)
 {
     RT.at<double>(0,0) = 7.533745e-03; RT.at<double>(0,1) = -9.999714e-01; RT.at<double>(0,2) = -6.166020e-04; RT.at<double>(0,3) = -4.069766e-03;
@@ -27,49 +25,51 @@ void loadCalibrationData(cv::Mat &P_rect_00, cv::Mat &R_rect_00, cv::Mat &RT)
 
 }
 
-void showLidarTopview(std::vector<LidarPoint> &lidarPoints, cv::Size worldSize, cv::Size imageSize)
+void showLidarTopview(const std::vector<LidarPoint> &lidarPoints, const cv::Size worldSize, const cv::Size imageSize)
 {
     // create topview image
     cv::Mat topviewImg(imageSize, CV_8UC3, cv::Scalar(0, 0, 0));
 
     // plot Lidar points into image
-    for (auto it = lidarPoints.begin(); it != lidarPoints.end(); ++it)
+    for (const auto& lpt : lidarPoints)
     {
-        float xw = (*it).x; // world position in m with x facing forward from sensor
-        float yw = (*it).y; // world position in m with y facing left from sensor
+        float xw = lpt.x; // world position in m with x facing forward from sensor
+        float yw = lpt.y; // world position in m with y facing left from sensor
+        float zw = lpt.z; // world position in m with y facing left from sensor
+       
+        if(zw > -1.40f)
+        { 
+            // Convert from world coordinates to image coordinates
+            int y = static_cast<int>((-xw * imageSize.height / worldSize.height) + imageSize.height);
+            int x = static_cast<int>((-yw * imageSize.height / worldSize.height) + imageSize.width / 2);
+      
+            // Color based on distance (closer = red, farther = green)
+            float maxVal = static_cast<float>(worldSize.height);
+            int red = std::min(255, static_cast<int>(255 * std::abs((xw - maxVal) / maxVal)));
+            int green = std::min(255, static_cast<int>(255 * (1 - std::abs((xw - maxVal) / maxVal))));
 
-        int y = (-xw * imageSize.height / worldSize.height) + imageSize.height;
-        int x = (-yw * imageSize.height / worldSize.height) + imageSize.width / 2;
-
-        float zw = (*it).z; // world position in m with y facing left from sensor
-        if(zw > -1.40){       
-
-            float val = it->x;
-            float maxVal = worldSize.height;
-            int red = min(255, (int)(255 * abs((val - maxVal) / maxVal)));
-            int green = min(255, (int)(255 * (1 - abs((val - maxVal) / maxVal))));
             cv::circle(topviewImg, cv::Point(x, y), 5, cv::Scalar(0, green, red), -1);
         }
     }
 
-    // plot distance markers
-    float lineSpacing = 2.0; // gap between distance markers
-    int nMarkers = floor(worldSize.height / lineSpacing);
+    // plot distance markers every 2 meters
+    constexpr float lineSpacing = 2.0; // gap between distance markers
+    int nMarkers = static_cast<int>(std::floor(worldSize.height / lineSpacing));
+
     for (size_t i = 0; i < nMarkers; ++i)
     {
-        int y = (-(i * lineSpacing) * imageSize.height / worldSize.height) + imageSize.height;
+        int y = static_cast<int>((-(i * lineSpacing) * imageSize.height / worldSize.height) + imageSize.height);
         cv::line(topviewImg, cv::Point(0, y), cv::Point(imageSize.width, y), cv::Scalar(255, 0, 0));
     }
 
     // display image
-    string windowName = "Top-View Perspective of LiDAR data";
-    cv::namedWindow(windowName, 2);
+    const std::string windowName = "Top-View Perspective of LiDAR data";
+    //cv::namedWindow(windowName, 2);
     cv::imshow(windowName, topviewImg);
     cv::waitKey(0); // wait for key to be pressed
 }
 
-// TODO - Add your code inside this function
-void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes, std::vector<LidarPoint> &lidarPoints)
+void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes, const std::vector<LidarPoint> &lidarPoints)
 {
     // store calibration data in OpenCV matrices
     cv::Mat P_rect_xx(3,4,cv::DataType<double>::type); // 3x4 projection matrix after rectification
@@ -77,47 +77,51 @@ void clusterLidarWithROI(std::vector<BoundingBox> &boundingBoxes, std::vector<Li
     cv::Mat RT(4,4,cv::DataType<double>::type); // rotation matrix and translation vector
     loadCalibrationData(P_rect_xx, R_rect_xx, RT);
 
+    const double shrinkFactor = 0.10;
+
     // loop over all Lidar points and associate them to a 2D bounding box
     cv::Mat X(4, 1, cv::DataType<double>::type);
     cv::Mat Y(3, 1, cv::DataType<double>::type);
 
-    for (auto it1 = lidarPoints.begin(); it1 != lidarPoints.end(); ++it1)
+    for (const auto& lidarPoint : lidarPoints)
     {
         // assemble vector for matrix-vector-multiplication
-        X.at<double>(0, 0) = it1->x;
-        X.at<double>(1, 0) = it1->y;
-        X.at<double>(2, 0) = it1->z;
-        X.at<double>(3, 0) = 1;
+        // homogeneous coordinates
+        X.at<double>(0, 0) = lidarPoint.x;
+        X.at<double>(1, 0) = lidarPoint.y;
+        X.at<double>(2, 0) = lidarPoint.z;
+        X.at<double>(3, 0) = 1.0;
 
-        // project Lidar point into camera
+        // project Lidar point into camera image plane
         Y = P_rect_xx * R_rect_xx * RT * X;
-        cv::Point pt;
-        pt.x = Y.at<double>(0, 0) / Y.at<double>(0, 2); // pixel coordinates
-        pt.y = Y.at<double>(1, 0) / Y.at<double>(0, 2);
+        double w = Y.at<double>(2, 0);
+        cv::Point2f pt(Y.at<double>(0, 0) / w, Y.at<double>(1, 0) / w);
 
-        double shrinkFactor = 0.10;
-        vector<vector<BoundingBox>::iterator> enclosingBoxes; // pointers to all bounding boxes which enclose the current Lidar point
-        for (vector<BoundingBox>::iterator it2 = boundingBoxes.begin(); it2 != boundingBoxes.end(); ++it2)
+        std::vector<BoundingBox*> enclosingBoxes; // pointers to all bounding boxes which enclose the current Lidar point
+
+        for(auto& box : boundingBoxes)
         {
             // shrink current bounding box slightly to avoid having too many outlier points around the edges
-            cv::Rect smallerBox;
-            smallerBox.x = (*it2).roi.x + shrinkFactor * (*it2).roi.width / 2.0;
-            smallerBox.y = (*it2).roi.y + shrinkFactor * (*it2).roi.height / 2.0;
-            smallerBox.width = (*it2).roi.width * (1 - shrinkFactor);
-            smallerBox.height = (*it2).roi.height * (1 - shrinkFactor);
+            cv::Rect smallerBox(
+                box.roi.x + shrinkFactor * box.roi.width / 2.0,
+                box.roi.y + shrinkFactor * box.roi.height / 2.0,
+                box.roi.width * (1.0 - shrinkFactor),
+                box.roi.height * (1.0 - shrinkFactor)
+            );
 
             // check wether point is within current bounding box
             if (smallerBox.contains(pt))
             {
-                it2->lidarPoints.push_back(*it1);
-                lidarPoints.erase(it1);
-                it1--;
-                break;
+                enclosingBoxes.emplace_back(&box);
             }
         } // eof loop over all bounding boxes
         
-      // TODO - check wether point has been enclosed by one or by multiple boxes. 
-      // Accordingly, add Lidar point to bounding box
+      // Check wether point has been enclosed by one or by multiple boxes. 
+      // Accordingly, add Lidar point to bounding box if it falls exactly in one ROI
+      if(enclosingBoxes.size() == 1)
+      {
+        enclosingBoxes[0]->lidarPoints.emplace_back(lidarPoint);
+      }
 
     } // eof loop over all Lidar points
 }
@@ -131,11 +135,11 @@ int main()
     readBoundingBoxes("../dat/C53A3_currBoundingBoxes.dat", boundingBoxes);
 
     clusterLidarWithROI(boundingBoxes, lidarPoints);
-    for (auto it = boundingBoxes.begin(); it != boundingBoxes.end(); ++it)
+    for (const auto &box : boundingBoxes)
     {
-        if (it->lidarPoints.size() > 0)
+        if (!box.lidarPoints.empty())
         {
-            showLidarTopview(it->lidarPoints, cv::Size(10.0, 25.0), cv::Size(1000, 2000));
+            showLidarTopview(box.lidarPoints, cv::Size(10.0, 25.0), cv::Size(1000, 2000));
         }
     }   
 
